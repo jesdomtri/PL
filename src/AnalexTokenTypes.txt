@@ -1,0 +1,19 @@
+// $ANTLR : Analex.g -> AnalexTokenTypes.txt$
+Analex    // output token vocab name
+ORDENES=4
+DEF_FUNCION=5
+LLAMADA=6
+PyC=7
+IDENT=8
+PA=9
+PC=10
+ASIG=11
+MAS=12
+MENOS=13
+POR=14
+DIV=15
+NUMERO=16
+BT=17
+SL=18
+DIGITO=19
+LETRA=20

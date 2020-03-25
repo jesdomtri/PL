@@ -1,0 +1,224 @@
+header{
+	import java.util.*;
+	import antlr.*;
+}
+class Interprete extends TreeParser; 
+options{
+   importVocab = Anasint;	
+}
+{	
+	Map<String,Double> m = new HashMap<>();
+	
+//Anadir asignacion al map
+	void anadir(AST a){
+		String s = a.getFirstChild().getText();
+		m.put(s, exp(a.getFirstChild().getNextSibling()));
+	}
+	
+//Mostrar por pantalla la asignacion y su valor ya calculado
+	String asig(AST e){
+		String s = e.getFirstChild().getText();
+		return "ASIGNACION: " + e.toStringTree() + "           --->         " + s + " = " + exp(e.getFirstChild().getNextSibling());
+	}
+
+//Mostrar por pantalla la expresion y su valor
+	String expRes(AST e){
+		return "EXPRESION: " + e.toStringTree() + "           --->         " + exp(e);
+	}
+	
+	//Calcular valores de una expresion
+	Double exp(AST e){
+		switch(e.getType()){
+			case MAS:
+				return exp(e.getFirstChild()) + exp(e.getFirstChild().getNextSibling());
+			case MENOS:
+				return exp(e.getFirstChild()) - exp(e.getFirstChild().getNextSibling());
+			case POR:
+				return exp(e.getFirstChild()) * exp(e.getFirstChild().getNextSibling());
+			case DIV:
+				return exp(e.getFirstChild()) / exp(e.getFirstChild().getNextSibling());
+			case NUMERO:
+				return Double.valueOf(e.getText());
+			case IDENT:
+				return m.get(e.getText());
+			default:
+				return -1.;
+		}
+	}
+	
+	//PARTE DE LAS FUNCIONES
+	
+	ASTFactory af = new ASTFactory();
+	Map<List<String>,AST> mF = new HashMap<>();
+	List<AST> lFunciones = new ArrayList<>();
+	
+//Anyadir contenido al map de funciones	
+	void anadirF(AST e){
+		List<String> ls = new ArrayList<>();
+		Collections.addAll(ls, e.getFirstChild().getText(), e.getFirstChild().getNextSibling().getText());
+		mF.put(ls, af.dupTree(e.getFirstChild().getNextSibling().getNextSibling()));
+	}
+
+//Buscar si existe una funcion en mF
+	Boolean existe(AST e){
+		Boolean res = false;
+		for(List<String> ls : mF.keySet()){
+			System.out.println(ls.get(0));
+			System.out.println(e.getFirstChild().getText());
+			if(ls.get(0).equals(e.getFirstChild().getText())){
+				res = true;
+			}
+		}
+		return res;
+	}
+
+//Dame la expresion	
+	AST dame(AST e){
+		ASTFactory afc = new ASTFactory();
+		AST ast = null;
+		for(List<String> ls : mF.keySet()){
+			if(ls.get(0).equals(e.getFirstChild().getText()) ){
+				ast = afc.dupTree(mF.get(ls));
+			}
+		}
+		return ast;
+	}
+	
+	Boolean existeLFunciones(AST sec){
+		Boolean res = false;
+		for(AST a : lFunciones){
+			if(a.getFirstChild().getText().equals(sec.getFirstChild().getText())){
+				res = true;
+			}
+		}
+		return res;
+	}
+	
+	AST dameLFunciones(AST sec){
+		AST res = null;
+		for(AST a : lFunciones){
+			if(a.getFirstChild().getText().equals(sec.getFirstChild().getText())){
+				res = a.getFirstChild().getNextSibling();
+			}
+		}
+		return res;
+	}
+	
+//Metodo para devolver el valor de una llamada
+	String llamada(AST e){
+		AST org = dame(e);
+		System.out.println("ANTES DE SUSTITUIR: " + org.toStringTree());
+		ASTFactory astf = new ASTFactory();
+		AST sec = null;
+		if(existeLFunciones(e)){
+			sec = dameLFunciones(e);
+		}
+		sustituir(org, sec, e.getFirstChild().getNextSibling());
+		System.out.println("DESPUÉS DE SUSTITUIR: " + org.toStringTree());
+		return "LLAMADA: " + e.toStringTree() + "           --->         " + expF(org);
+	}	
+	
+	
+//Metodo para sustituir para cuando hago una llamade de una funcion	
+	void sustituir(AST first, AST sec, AST third){
+//		System.out.println("first: " + first.toStringTree());
+//		System.out.println("sec: " + sec.toStringTree());
+//		System.out.println("third: " + third.toStringTree());
+//		System.out.println("tipo: " + org.getType());
+//		System.out.println("texto: " + org.getText());		
+		switch(first.getType()){
+			case MAS:
+			case MENOS:
+			case POR:
+			case DIV:
+				sustituir(first.getFirstChild(), sec, third);
+				sustituir(first.getFirstChild().getNextSibling(), sec, third);
+				break;
+			case LLAMADA:
+				sustituir(first.getFirstChild().getNextSibling(), sec, third);
+				break;
+			case IDENT:
+				if(first.getText().equals(sec.getText())){
+					first.setType(third.getType());
+					first.setText(third.getText());
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+//Calcular valores de una expresion
+	Double expF(AST e){
+		switch(e.getType()){
+			case MAS:
+				return expF(e.getFirstChild()) + expF(e.getFirstChild().getNextSibling());
+			case MENOS:
+				return expF(e.getFirstChild()) - expF(e.getFirstChild().getNextSibling());
+			case POR:
+				return expF(e.getFirstChild()) * expF(e.getFirstChild().getNextSibling());
+			case DIV:
+				return expF(e.getFirstChild()) / expF(e.getFirstChild().getNextSibling());
+			case NUMERO:
+				return Double.valueOf(e.getText());
+			case IDENT:
+				return m.get(e.getText());	
+			case LLAMADA:
+				System.out.println(e.toStringTree());
+				if(existe(e)){
+//					System.out.println("EXISTE " + e.getFirstChild().getText());
+					return expF(dame(e));
+				}else{
+//					System.out.println("NO EXISTE ");
+					return 0.;
+				}
+			default:
+				return 0.;
+		}
+	}
+	
+	
+}
+ordenes: #(ORDENES (orden)+ ){
+//		for(AST e : mF.values()){
+//			System.out.println(e.toStringTree());
+//		}
+	}
+	;
+	
+orden: (d:def_funcion){
+	anadirF(d);
+	lFunciones.add(d);
+	System.out.println("ARBOL DE D: " + d.toStringTree());
+//	System.out.println("EL MAP DE FUNCIONES: " + mF);
+	}
+	| (a:asignacion {
+		anadir(a);
+		System.out.println(asig(a));
+//		System.out.println(m);
+		})
+	| (e:expresion {
+			if(e.getType() == LLAMADA){
+//				System.out.println("LA FUNCION DAME: " + dame(e).toStringTree());
+//				System.out.println(e.getFirstChild().getNextSibling().getText());
+				System.out.println(llamada(e));
+			}else{
+				System.out.println(expRes(e));
+			}
+		})
+	;
+	
+def_funcion: #(DEF_FUNCION IDENT IDENT expresion)
+	;
+
+asignacion: #(ASIG IDENT expresion)
+	;
+
+expresion: #(MAS expresion expresion)
+	| #(MENOS expresion expresion)
+	| #(POR expresion expresion)
+	| #(DIV expresion expresion)
+	| NUMERO
+	| #(LLAMADA IDENT expresion) 
+	| IDENT
+	;
